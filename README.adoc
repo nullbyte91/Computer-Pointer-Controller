@@ -1,0 +1,214 @@
+= Computer-Pointer-Controller
+:idprefix:
+:idseparator: -
+:sectanchors:
+:sectlinks:
+:sectnumlevels: 6
+:sectnums:
+:toc: macro
+:toclevels: 6
+:toc-title: Table of Contents
+
+toc::[]
+
+== Introduction
+We use a gaze detection model to control the mouse pointer of the computer.  We are using the Gaze Estimation model to estimate the gaze of the user's eyes and change the mouse pointer position accordingly. The gaze detection model depend on the ouput of other three model face-detection, head-pose-estimation, facial-landmarks.
+
+== Architecture Block Diagram
+image::images/arch.png[]
+
+== Project structure
+    .
+    ├── core                    # This has all the core components face, gaze, headpos, landmarks and mouse_controller
+    ├── images                  # supported images for README.adoc
+    ├── resource                # Demo video's
+    ├── scripts                 # Auto script to download pre-trained models
+    ├── utils                   # Helper files
+    ├── main.py                 # Main function driver file
+    ├── LICENSE
+    └── README.md
+
+== Prerequisites
+
+To run the application in this tutorial, the OpenVINO™ toolkit and its dependencies must already be installed and verified using the included demos. Installation instructions may be found at: https://software.intel.com/en-us/articles/OpenVINO-Install-Linux or https://github.com/udacity/nd131-openvino-fundamentals-project-starter/blob/master/linux-setup.md
+
+The below steps are tested on Ubuntu 16.04:
+
+[source,bash]
+----
+# Install OpenVino
+wget http://registrationcenter-download.intel.com/akdlm/irc_nas/16612/l_openvino_toolkit_p_2020.2.120.tgz
+tar -xvf l_openvino_toolkit_p_2020.2.120.tgz
+cd l_openvino_toolkit_p_2020.2.120
+sed -i 's/decline/accept/g' silent.cfg
+sudo ./install.sh -s silent.cfg
+
+# System dep
+sudo apt update
+sudo apt-get install python3-pip
+pip3 install numpy
+pip3 install paho-mqtt
+sudo apt install libzmq3-dev libkrb5-dev
+sudo apt install ffmpeg
+sudo apt-get install cmake
+sudo apt-get install python3-venv
+
+# Create a Virtual env
+python3 -m venv openvino-env
+source openvino-env/bin/active
+
+# Project dep
+pip3 install -r requirements.txt
+
+----
+
+== Build
+
+**1.** Clone the repository at desired location:
+
+[source,bash]
+----
+git clone https://github.com/nullbyte91/Computer-Pointer-Controller.git
+----
+
+**2.** Configure the build environment for the OpenCV
+toolkit by sourcing the "setupvars.sh" script.
+
+[source,bash]
+----
+bash /opt/intel/openvino/bin/setupvars.sh
+----
+
+**3.** Change to the top git repository:
+
+[source,bash]
+----
+cd Computer-Pointer-Controller/
+----
+
+**4.** Model download:
+Download all the models that necessary to this project.
+[source,bash]
+----
+bash scripts/download_models.sh
+----
+
+== Usage
+
+=== Run
+
+==== Face Detection
+[source,bash]
+----
+python3.6 main.py -i resource/demo.mp4 -m_fd mo_model/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001.xml -m_hp mo_model/intel/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001.xml -m_lm mo_model/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002.xml -m_g mo_model/intel/gaze-estimation-adas-0002/FP32/gaze-estimation-adas-0002.xml -o_fd
+----
+image::images/face_detection.gif[]
+
+==== Head Pose Estimation
+[source,bash]
+----
+python3.6 main.py -i resource/test_2.mp4 -m_fd mo_model/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001.xml -m_hp mo_model/intel/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001.xml -m_lm mo_model/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002.xml -m_g mo_model/intel/gaze-estimation-adas-0002/FP32/gaze-estimation-adas-0002.xml -o_hp
+----
+
+image::images/head_position.gif[]
+
+==== Landmark regression
+[source,bash]
+----
+python3.6 main.py -i resource/test_2.mp4 -m_fd mo_model/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001.xml -m_hp mo_model/intel/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001.xml -m_lm mo_model/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002.xml -m_g mo_model/intel/gaze-estimation-adas-0002/FP32/gaze-estimation-adas-0002.xml -o_lm
+----
+
+image::images/land_mark.gif[]
+
+
+==== Gaze Estimation
+[source,bash]
+----
+python3.6 main.py -i resource/test_2.mp4 -m_fd mo_model/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001.xml -m_hp mo_model/intel/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001.xml -m_lm mo_model/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002.xml -m_g mo_model/intel/gaze-estimation-adas-0002/FP32/gaze-estimation-adas-0002.xml -o_gm
+----
+
+image::images/gaze.gif[]
+
+====
+
+==== Mouse Pointer
+[source,bash]
+----
+python3.6 main.py -i resource/test_2.mp4 -m_fd mo_model/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001.xml -m_hp mo_model/intel/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001.xml -m_lm mo_model/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002.xml -m_g mo_model/intel/gaze-estimation-adas-0002/FP32/gaze-estimation-adas-0002.xml -o_mc
+----
+
+image::images/mouse_counter.gif[]
+
+[quote]
+sluggishness can be removed by removing if frame_count % 10 == 0: this counter. 
+====
+
+=== Performance analysis
+==== Model size comparision
+
+Hardware configuration: i7-6820HQ CPU
+
+|====
+|Model Combination |precision - Size |FPS in Sec |Load Time in Sec
+
+|face-detection-adas - FP32
+
+head-pose-estimation-adas - FP32
+
+facial-landmarks-35-adas - FP32
+
+gaze-estimation-adas - FP32
+
+|1.8M
+
+7.3M
+
+18M
+
+7.2M
+
+|42 FPS
+
+| 0.08657677700102795
+
+|====
+
+|====
+|Model Combination |precision - Size |FPS in Sec |Load Time in Sec
+
+|face-detection-adas - FP32
+
+head-pose-estimation-adas - FP16
+
+facial-landmarks-35-adas - FP16
+
+gaze-estimation-adas - FP16
+
+|1.8M
+
+3.7M
+
+8.8M
+
+3.6M
+
+|43.5 FPS
+
+| 0.05757568099943455
+
+|====
+
+==== OpenVino API for Layer by layer analysis
+[source,bash]
+----
+python3.6 main.py -i resource/test_2.mp4 -m_fd mo_model/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001.xml -m_hp mo_model/intel/head-pose-estimation-adas-0001/FP32-INT8/head-pose-estimation-adas-0001.xml -m_lm mo_model/intel/facial-landmarks-35-adas-0002/FP32-INT8/facial-landmarks-35-adas-0002.xml -m_g mo_model/intel/gaze-estimation-adas-0002/FP32-INT8/gaze-estimation-adas-0002.xml --perf_stats
+----
+== To Do
+
+=== README
+
+* [x] docker compose for deployment
+
+=== Development
+
+* [x] Hotspots in used model using VTune
