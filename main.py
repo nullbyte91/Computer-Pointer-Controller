@@ -38,25 +38,36 @@ def build_argparser():
     parser.add_argument('-t_fd', metavar='[0..1]', type=float, default=0.6,
                        help="(optional) Probability threshold for face detections" \
                        "(default: %(default)s)")
-
+    parser.add_argument('-o_fd', action='store_true',
+                       help="(optional) Show face detection output")
+                       
     parser.add_argument("-m_hp", "--model_head_position", required=True, type=str,
                         help="Path to an .xml file with a trained Head Pose Estimation model") 
     parser.add_argument('-d_hp', default='CPU', choices=DEVICE_KINDS,
                        help="(optional) Target device for the " \
                        "Head Position model (default: %(default)s)")
+    parser.add_argument('-o_hp', action='store_true',
+                       help="(optional) Show HeadPsition output")
 
     parser.add_argument("-m_lm", "--model_landmark_regressor", required=True, type=str,
                         help="Path to an .xml file with a trained Head Pose Estimation model") 
     parser.add_argument('-d_lm', default='CPU', choices=DEVICE_KINDS,
                        help="(optional) Target device for the " \
                        "Facial Landmarks Regression model (default: %(default)s)")
+    parser.add_argument('-o_lm', action='store_true',
+                       help="(optional) Show Landmark detection output")
     
     parser.add_argument("-m_gm", "--model_gaze", required=True, type=str,
                         help="Path to an .xml file with a trained Gaze Estimation model") 
     parser.add_argument('-d_gm', default='CPU', choices=DEVICE_KINDS,
                        help="(optional) Target device for the " \
                        "Gaze estimation model (default: %(default)s)")
+    parser.add_argument('-o_gm', action='store_true',
+                       help="(optional) Show Gaze estimation output")
     
+    parser.add_argument('-o_mc', action='store_true',
+                       help="(optional) Run mouse counter")
+
     parser.add_argument('-pc', '--perf_stats', action='store_true',
                        help="(optional) Output detailed per-layer performance stats")
     parser.add_argument('-exp_r_fd', metavar='NUMBER', type=float, default=1.15,
@@ -81,6 +92,8 @@ def build_argparser():
                          help="(optional) Auto-pause after each frame")
     parser.add_argument('-o', '--output', metavar="PATH", default="",
                          help="(optional) Path to save the output video to")
+
+
     return parser
 
 class ProcessOnFrame:
@@ -102,6 +115,7 @@ class ProcessOnFrame:
                 "PERF_COUNT": "YES" if args.perf_stats else "NO"})
 
         log.info("Loading models")
+        start_time = time.perf_counter()
         # Load face detection model on Inference Engine
         face_detector_net = self.load_model(args.mode_face_detection)
         
@@ -113,6 +127,10 @@ class ProcessOnFrame:
 
         # Load gaze estimation model on IE
         gaze_net = self.load_model(args.model_gaze)
+
+        stop_time = time.perf_counter()
+
+        print("[INFO] Model Load Time: {}".format(stop_time - start_time))
 
         # Configure Face detector [detection threshold, ROI Scale]
         self.face_detector = FaceDetector(face_detector_net,
@@ -294,6 +312,12 @@ class MouseController:
         self.display = not args.no_show
         self.print_perf_stats = args.perf_stats
 
+        self.fd_out = args.o_fd # Face detection
+        self.hp_out = args.o_hp # Head position
+        self.lm_out = args.o_lm # Land mark detection
+        self.gm_out = args.o_gm # Gaze detection
+        self.mc_out = args.o_mc # Mouse conter
+
         self.frame_time = 0
         self.frame_start_time = 0
         self.fps = 0
@@ -319,7 +343,8 @@ class MouseController:
         self.frame_time = now - self.frame_start_time
         self.fps = 1.0 / self.frame_time
         self.frame_start_time = now
-
+        return self.fps
+        
     def draw_detection_roi(self, frame, roi):
         """
         Draw Face detection bounding Box
@@ -423,12 +448,13 @@ class MouseController:
         faceBoundingBoxWidth = roi[0].size[0]
         faceBoundingBoxHeight = roi[0].size[1]
 
-        # Draw Face detection bounding Box
-        for i in range(len(roi)):
-            # Draw face ROI border
-            cv2.rectangle(frame,
-                        tuple(roi[i].position), tuple(roi[i].position + roi[i].size),
-                        (0, 0, 255), 4)
+        if self.fd_out:     
+            # Draw Face detection bounding Box
+            for i in range(len(roi)):
+                # Draw face ROI border
+                cv2.rectangle(frame,
+                            tuple(roi[i].position), tuple(roi[i].position + roi[i].size),
+                            (0, 0, 255), 4)
 
         # Draw headPoseAxes
         # Here head_position_x --> angle_y_fc  # Yaw
@@ -447,25 +473,26 @@ class MouseController:
         cosR = cos(roll * pi / 180.0)
         
         axisLength = 0.4 * faceBoundingBoxWidth
-        xCenter = int(roi[i].position[0] + faceBoundingBoxWidth / 2)
-        yCenter = int(roi[i].position[1] + faceBoundingBoxHeight / 2)
+        xCenter = int(roi[0].position[0] + faceBoundingBoxWidth / 2)
+        yCenter = int(roi[0].position[1] + faceBoundingBoxHeight / 2)
 
-        # center to right
-        # cv2.line(frame, (xCenter, yCenter), 
-        #                 (((xCenter) + int (axisLength * (cosR * cosY + sinY * sinP * sinR))),
-        #                  ((yCenter) + int (axisLength * cosP * sinR))),
-        #                 (0, 0, 255), thickness=2)
-        # center to top
-        # cv2.line(frame, (xCenter, yCenter), 
-        #                 (((xCenter) + int (axisLength * (cosR * sinY * sinP + cosY * sinR))),
-        #                  ((yCenter) - int (axisLength * cosP * cosR))),
-        #                 (0, 255, 0), thickness=2)
-        
-        # Center to forward
-        # cv2.line(frame, (xCenter, yCenter), 
-        #                 (((xCenter) + int (axisLength * sinY * cosP)),
-        #                  ((yCenter) + int (axisLength * sinP))),
-        #                 (255, 0, 0), thickness=2)
+        if self.hp_out:   
+            #center to right
+            cv2.line(frame, (xCenter, yCenter), 
+                            (((xCenter) + int (axisLength * (cosR * cosY + sinY * sinP * sinR))),
+                            ((yCenter) + int (axisLength * cosP * sinR))),
+                            (0, 0, 255), thickness=2)
+            #center to top
+            cv2.line(frame, (xCenter, yCenter), 
+                            (((xCenter) + int (axisLength * (cosR * sinY * sinP + cosY * sinR))),
+                            ((yCenter) - int (axisLength * cosP * cosR))),
+                            (0, 255, 0), thickness=2)
+            
+            #Center to forward
+            cv2.line(frame, (xCenter, yCenter), 
+                            (((xCenter) + int (axisLength * sinY * cosP)),
+                            ((yCenter) + int (axisLength * sinP))),
+                            (255, 0, 0), thickness=2)
         
         # Draw landmark 
         keypoints = [landmarks.left_eye,
@@ -473,11 +500,12 @@ class MouseController:
                 landmarks.nose_tip,
                 landmarks.left_lip_corner,
                 landmarks.right_lip_corner]
-
-        for point in keypoints:
-            center = roi[0].position + roi[0].size * point
-            cv2.circle(frame, tuple(center.astype(int)), 2, (255, 255, 0), 4)
         
+        if self.lm_out:
+            for point in keypoints:
+                center = roi[0].position + roi[0].size * point
+                cv2.circle(frame, tuple(center.astype(int)), 2, (255, 255, 0), 4)
+            
         # Draw Gaz vector with final frame
         left_eye_x = (landmarks.left_eye[0] * faceBoundingBoxWidth + roi[0].position[0])
         left_eye_y = (landmarks.left_eye[1] * faceBoundingBoxHeight + roi[0].position[1])
@@ -502,17 +530,19 @@ class MouseController:
         gazeArrow_x = int((gaze[0]) * arrowLength)
         gazeArrow_y = int(-(gaze[1]) * arrowLength)
 
-        cv2.arrowedLine(frame, 
-                         (leftEyeMidpoint_start, leftEyeMidpoint_end), 
-                         ((leftEyeMidpoint_start + gazeArrow_x), 
-                          leftEyeMidpoint_end + (gazeArrow_y)),
-                          (0, 255, 0), 3)
+        if self.gm_out:
+            cv2.arrowedLine(frame, 
+                            (leftEyeMidpoint_start, leftEyeMidpoint_end), 
+                            ((leftEyeMidpoint_start + gazeArrow_x), 
+                            leftEyeMidpoint_end + (gazeArrow_y)),
+                            (0, 255, 0), 3)
 
-        cv2.arrowedLine(frame, 
-                         (rightEyeMidpoint_start, rightEyeMidpoint_End), 
-                         ((rightEyeMidpoint_start + gazeArrow_x), 
-                          rightEyeMidpoint_End + (gazeArrow_y)),
-                          (0, 255, 0), 3)
+            cv2.arrowedLine(frame, 
+                            (rightEyeMidpoint_start, rightEyeMidpoint_End), 
+                            ((rightEyeMidpoint_start + gazeArrow_x), 
+                            rightEyeMidpoint_End + (gazeArrow_y)),
+                            (0, 255, 0), 3)
+        
         
         if self.print_perf_stats:
             log.info('Performance stats:')
@@ -606,10 +636,13 @@ class MouseController:
 
             self.draw_final_result(frame, detections, headPosition, 
                                    landmarks[0], gaze_vector)
-            mouse_x, mouse_y = self.get_mouse_point(headPosition, gaze_vector)
             
-            if frame_count % 20 == 0:
-                self.mc.move(mouse_x, mouse_y)
+            if self.mc_out:
+                # This count can be removed if you have high performance system
+                if frame_count % 10 == 0:
+                    mouse_x, mouse_y = self.get_mouse_point(headPosition, gaze_vector)
+                    
+                    self.mc.move(mouse_x, mouse_y)
 
             # Write on disk 
             if output_stream:
@@ -622,7 +655,8 @@ class MouseController:
                     break
             
             # Update FPS
-            self.update_fps()
+            FPS = self.update_fps()
+            print("[INFO] approx. FPS: {:.2f}".format(FPS))
             self.frame_num += 1
 
     def run(self, args):
