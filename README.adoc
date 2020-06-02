@@ -12,7 +12,7 @@
 toc::[]
 
 == Introduction
-We use a gaze detection model to control the mouse pointer of the computer.  We are using the Gaze Estimation model to estimate the gaze of the user's eyes and change the mouse pointer position accordingly. The gaze detection model depend on the ouput of other three model face-detection, head-pose-estimation, facial-landmarks.
+Control the mouse pointer of the computer by using gaze detection points. The gaze is the deep learning model to estimate the gaze of the user’s eyes and change the mouse pointer position accordingly. The gaze detection model depends on the output of the other models face-detection, head-pose-estimation, facial-landmarks. So, The application is an integration of face detection model, head-pose estimation model, and facial landmarks model.
 
 == Architecture Block Diagram
 image::images/arch.png[]
