@@ -55,7 +55,7 @@ sudo apt-get install python3-venv
 
 # Create a Virtual env
 python3 -m venv openvino-env
-source openvino-env/bin/active
+source openvino-env/bin/activate
 
 # Project dep
 pip3 install -r requirements.txt
