@@ -1,3 +1,6 @@
-requests 
-PyYAML 
-pyautogui
+requests # Downlaod script 
+PyYAML # Download script
+pyautogui #Mouse pointer controller
+numpy # Package to manipute array
+opencv-python # CV package
+
