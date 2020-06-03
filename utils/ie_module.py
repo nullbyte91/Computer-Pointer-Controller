@@ -44,7 +44,7 @@ class InferenceContext:
                 raise NotImplementedError(
                     "Some layers are not supported on the device")
 
-    def deploy_model(self, model, device, max_requests=1):
+    def load_model(self, model, device, max_requests=1):
         self.check_model_support(model, device)
         plugin = self.plugins[device]
         deployed_model = plugin.load(network=model, num_requests=max_requests)
@@ -63,7 +63,7 @@ class Module(object):
     def deploy(self, device, context, queue_size=1):
         self.context = context
         self.max_requests = queue_size
-        self.device_model = context.deploy_model(
+        self.device_model = context.load_model(
             self.model, device, self.max_requests)
         self.model = None
 
