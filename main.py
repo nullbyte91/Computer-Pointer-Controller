@@ -28,14 +28,15 @@ def build_argparser():
     """
     parser = ArgumentParser()
     parser.add_argument("-i", "--input", required=True, type=str,
-                        help="Path to image or video file")
+                        help="Path to image or video file or enter cam for webcam")
+
     parser.add_argument("-m_fd", "--mode_face_detection", required=True, type=str,
                         help="Path to an .xml file with a trained Face Detection model")               
     
     parser.add_argument('-d_fd', default='CPU', choices=DEVICE_KINDS,
                        help="(optional) Target device for the " \
                        "Face Detection model (default: %(default)s)")
-    parser.add_argument('-t_fd', metavar='[0..1]', type=float, default=0.6,
+    parser.add_argument('-t_fd', metavar='[0..1]', type=float, default=0.4,
                        help="(optional) Probability threshold for face detections" \
                        "(default: %(default)s)")
     parser.add_argument('-o_fd', action='store_true',
@@ -226,6 +227,7 @@ class ProcessOnFrame:
 
         # Predict and return ROI
         rois = self.face_detector.get_roi_proposals(frame)
+
         if self.QUEUE_SIZE < len(rois):
             log.warning("Too many faces for processing." \
                     " Will be processed only %s of %s." % \
@@ -615,8 +617,14 @@ class MouseController:
                 frame = MouseController.center_crop(frame, self.input_crop)
             
             self.org_frame = frame.copy()
+
             # Get Face detection
             detections = self.frame_processor.face_detector_process(frame)
+            
+            # Since other three models are depend on face detection. Continue
+            # only if detection happens
+            if not detections:
+                continue
 
             # Get head Position
             headPosition = self.frame_processor.head_position_estimator_process(frame)
@@ -630,7 +638,6 @@ class MouseController:
             gaze = self.frame_processor.gaze_estimation_process(headPosition, 
                                 output[0], output[1])
             gaze_vector = gaze[0]
-            # print(type(gaze_vector))
             
             gaze_vector = gaze_vector['gaze_vector']
 
@@ -666,7 +673,13 @@ class MouseController:
         args: Input args
         """
         # Open Input stream
-        input_stream = MouseController.open_input_stream(args.input)
+        # We camera node is 0
+        if args.input == "cam":
+            path = "0"
+        else:
+            path = args.input
+
+        input_stream = MouseController.open_input_stream(path)
         
         if input_stream is None or not input_stream.isOpened():
             log.error("Cannot open input stream: %s" % args.input)
