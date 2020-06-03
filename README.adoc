@@ -143,6 +143,19 @@ image::images/mouse_counter.gif[]
 sluggishness can be removed by removing if frame_count % 10 == 0: this counter. 
 ====
 
+==== Run on Video or Camera Feed
+[source,bash]
+----
+# To Run on Video feed use -i video_path
+python3.6 main.py -i resource/test_2.mp4
+
+# To Run on Camera Feed
+python3.6 main.py -i cam
+
+[quote]
+By default the camera node is pointing to 0, Please modify if you have different camera node.
+
+----
 === Performance analysis
 ==== Model size comparision
 
@@ -197,6 +210,10 @@ gaze-estimation-adas - FP16
 | 0.05757568099943455
 
 |====
+===== Conclusion
+Face detection is key information that we are passing to the other three models. So, Keeping the Face detection in Precision 32 bits and other models in 16 bits help us reduce the model load time, model size. But, INT8 Precision output was very poor. 
+
+I got the best performance in terms of time and Core utilization with Face detection with FP32 and other models with FP16.
 
 ==== OpenVino API for Layer by layer analysis
 [source,bash]
